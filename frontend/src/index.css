@@ -1,0 +1,414 @@
+/* Global Reset & Basic Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f9;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Navbar */
+.navbar {
+  background-color: #2c3e50;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-brand {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.navbar-links a {
+  color: white;
+  text-decoration: none;
+  margin-right: 1.5rem;
+  font-weight: 500;
+}
+
+.navbar-links button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Cards (Dashboard) */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 42px 15px rgba(0,0,0,0.1);
+  text-align: center;
+   transition: all 0.3s ease;
+}
+.stat-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+ 
+}
+
+.stat-card h5 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #555;
+}
+
+.stat-card h2 {
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+/* Colors for cards */
+.bg-primary { background-color: #3498db; color: white; }
+.bg-success { background-color: #2ecc71; color: white; }
+.bg-warning { background-color: #f39c12; color: white; }
+.bg-info { background-color: #16a085; color: white; }
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.table th, .table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  background-color: #34495e;
+  color: white;
+}
+
+.table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Badges */
+.badge {
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.badge-success { background-color: #2ecc71; color: white; }
+.badge-danger { background-color: #e74c3c; color: white; }
+
+/* Buttons */
+.btn {
+  padding: 0.9rem 1.8rem;              /* ขนาดใหญ่ขึ้น ใช้งานง่าย */
+  border: none;
+  border-radius: 12px;                  /* โค้งมนมากขึ้น ทันสมัย */
+  cursor: pointer;
+  font-weight: 600;                     /* ตัวหนาเด่น */
+  font-size: 1rem;
+  transition: all 0.3s ease;            /* การเคลื่อนไหวที่นุ่มนวล */
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* เงาเบา ๆ */
+  
+}
+
+.btn-warning {
+  background-color: #f39c12;
+  color: white;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+/* Login Page */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card {
+  background: white;
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card h3 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #2c3e50;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+}
+
+.alert-danger {
+  background-color: #fadbd8;
+  color: #e74c3c;
+  border: 1px solid #f5b7b1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .table {
+    font-size: 0.9rem;
+  }
+}
+/* ====================== User Dashboard Styles ====================== */
+
+/* Container หลัก - กึ่งกลางหน้า */
+.user-dashboard-container {
+  max-width: 700px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+/* การ์ดหลัก - พื้นหลังขาว ขอบโค้ง เงานุ่ม */
+.user-dashboard-card {
+  background: white;
+  padding: 3rem 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.user-dashboard-card:hover {
+  transform: translateY(-8px);
+}
+
+/* หัวข้อต้อนรับ */
+.user-dashboard-card h2 {
+  font-size: 2.2rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.user-dashboard-card p {
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 2rem;
+}
+
+/* การ์ดสถิติตู้ว่าง */
+.user-stat-card {
+  background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(22, 160, 133, 0.3);
+  margin: 2rem 0;
+}
+
+.user-stat-card h5 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  opacity: 0.9;
+}
+
+.user-stat-card h2 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+/* กล่องสถานะตู้ที่ใช้งานอยู่ */
+.current-locker-box {
+  background: linear-gradient(135deg, #e8f5e8 0%, #d0f0d0 100%);
+  padding: 2.5rem;
+  border-radius: 20px;
+  border: 3px solid #27ae60;
+  margin: 2.5rem 0;
+  box-shadow: 0 10px 30px rgba(39, 174, 96, 0.15);
+}
+
+.current-locker-box h3 {
+  color: #27ae60;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.current-locker-box h1 {
+  font-size: 6rem;
+  color: #27ae60;
+  margin: 1.5rem 0;
+  font-weight: 900;
+  text-shadow: 0 4px 10px rgba(39, 174, 96, 0.2);
+}
+
+.current-locker-box p {
+  font-size: 1.1rem;
+  color: #444;
+}
+
+/* กล่องยังไม่ได้ฝากของ */
+.no-locker-box {
+  padding: 2.5rem;
+  margin: 2.5rem 0;
+}
+
+.no-locker-box h3 {
+  color: #7f8c8d;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.no-locker-box p {
+  color: #95a5a6;
+  margin-bottom: 1.5rem;
+}
+
+/* ปุ่มใหญ่พิเศษ */
+.user-big-btn {
+  padding: 1.3rem 3rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 16px;
+  min-width: 280px;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.user-big-btn:hover:not(:disabled) {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+/* ปุ่มฝากของ */
+.btn-deposit {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.btn-deposit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+}
+
+/* ปุ่มถอนของ */
+.btn-withdraw {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+.btn-withdraw:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
+}
+
+/* ปุ่มออกจากระบบ */
+.btn-logout {
+  background: #e74c3c;
+  color: white;
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: #c0392b;
+  transform: translateY(-3px);
+}
+/* เวลาและวันที่ มุมล่างซ้ายของหน้าจอ */
+.dashboard-datetime {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  color: wrgb(0, 0, 0);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-width: 200px;
+}
+
+.dashboard-datetime:hover { 
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+
+}
+
+.dashboard-date {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  opacity: 0.9;
+}
+
+.dashboard-time {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
