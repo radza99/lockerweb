@@ -40,158 +40,20 @@
 .read-the-docs {
   color: #888;
 }
-/* ====================== User Dashboard Styles ====================== */
-
-/* Container หลัก - กึ่งกลางหน้า */
-.user-dashboard-container {
-  max-width: 700px;
-  margin: 3rem auto;
-  padding: 0 1rem;
-}
-
-/* การ์ดหลัก - พื้นหลังขาว ขอบโค้ง เงานุ่ม */
-.user-dashboard-card {
-  background: white;
-  padding: 3rem 2.5rem;
-  border-radius: 20px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease;
-}
-
-.user-dashboard-card:hover {
-  transform: translateY(-8px);
-}
-
-/* หัวข้อต้อนรับ */
-.user-dashboard-card h2 {
-  font-size: 2.2rem;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-  font-weight: 700;
-}
-
-.user-dashboard-card p {
-  font-size: 1.2rem;
-  color: #555;
-  margin-bottom: 2rem;
-}
-
-/* การ์ดสถิติตู้ว่าง */
-.user-stat-card {
-  background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%);
+.btn-danger {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
-  padding: 2rem;
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(22, 160, 133, 0.3);
-  margin: 2rem 0;
-}
-
-.user-stat-card h5 {
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-  opacity: 0.9;
-}
-
-.user-stat-card h2 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin: 0;
-}
-
-/* กล่องสถานะตู้ที่ใช้งานอยู่ */
-.current-locker-box {
-  background: linear-gradient(135deg, #e8f5e8 0%, #d0f0d0 100%);
-  padding: 2.5rem;
-  border-radius: 20px;
-  border: 3px solid #27ae60;
-  margin: 2.5rem 0;
-  box-shadow: 0 10px 30px rgba(39, 174, 96, 0.15);
-}
-
-.current-locker-box h3 {
-  color: #27ae60;
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-}
-
-.current-locker-box h1 {
-  font-size: 6rem;
-  color: #27ae60;
-  margin: 1.5rem 0;
-  font-weight: 900;
-  text-shadow: 0 4px 10px rgba(39, 174, 96, 0.2);
-}
-
-.current-locker-box p {
-  font-size: 1.1rem;
-  color: #444;
-}
-
-/* กล่องยังไม่ได้ฝากของ */
-.no-locker-box {
-  padding: 2.5rem;
-  margin: 2.5rem 0;
-}
-
-.no-locker-box h3 {
-  color: #7f8c8d;
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-}
-
-.no-locker-box p {
-  color: #95a5a6;
-  margin-bottom: 1.5rem;
-}
-
-/* ปุ่มใหญ่พิเศษ */
-.user-big-btn {
-  padding: 1.3rem 3rem;
-  font-size: 1.4rem;
-  font-weight: 700;
-  border-radius: 16px;
-  min-width: 280px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.user-big-btn:hover:not(:disabled) {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-}
-
-/* ปุ่มฝากของ */
-.btn-deposit {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-}
-
-.btn-deposit:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
-}
-
-/* ปุ่มถอนของ */
-.btn-withdraw {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-}
-
-.btn-withdraw:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
-}
-
-/* ปุ่มออกจากระบบ */
-.btn-logout {
-  background: #e74c3c;
-  color: white;
-  padding: 0.7rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
 }
 
-.btn-logout:hover {
-  background: #c0392b;
+.btn-danger:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
   transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
 }

@@ -66,7 +66,7 @@ export default function Lockers() {
                       className="btn btn-warning"
                       onClick={() => forceOpen(locker.locker_id)}
                     >
-                      Force Open
+                      Openlocker
                     </button>
                   )}
                 </td>

@@ -4,22 +4,24 @@ import mysql.connector
 from datetime import timedelta
 from mysql.connector import Error
 
-
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-เปลี่ยนเป็นอะไรก็ได้ที่ปลอดภัย'
-CORS(app, supports_credentials=True)  # สำคัญสำหรับ session + React
-app.config['SESSION_PERMANENT'] = False  # สำคัญ! ทำให้ session ไม่ถาวร
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # อายุสูงสุด 30 นาที (ปรับได้)
+
+# ตั้งค่า Session ให้หมดอายุเมื่อปิดเบราว์เซอร์
+app.config['SESSION_PERMANENT'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # สูงสุด 30 นาที
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # ถ้าใช้ HTTPS ให้เป็น True
+app.config['SESSION_COOKIE_SECURE'] = False  # เปลี่ยนเป็น True เมื่อใช้ HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+CORS(app, supports_credentials=True)
 
 def get_db():
     try:
         conn = mysql.connector.connect(
             host='localhost',
             user='root',
-            password='1234',           # เปลี่ยนตามของคุณ
+            password='1234',
             database='db_safe_locker'
         )
         return conn
@@ -37,7 +39,7 @@ def admin_login():
 
     if username == 'admin' and password == 'admin123':
         session['admin_logged_in'] = True
-        session.permanent = False  # บังคับให้ session หมดอายุเมื่อปิดเบราว์เซอร์
+        session.permanent = False  # หมดอายุเมื่อปิดเบราว์เซอร์
         return jsonify({'success': True, 'message': 'เข้าสู่ระบบสำเร็จ'})
     else:
         return jsonify({'success': False, 'message': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}), 401
@@ -49,11 +51,11 @@ def check_login():
     return jsonify({'authenticated': False}), 401
 
 @app.route('/api/admin/logout', methods=['POST'])
-def logout():
+def admin_logout():
     session.pop('admin_logged_in', None)
     return jsonify({'success': True})
 
-# ====================== Dashboard & Lockers ======================
+# ====================== Admin Dashboard & Lockers ======================
 
 @app.route('/api/admin/dashboard', methods=['GET'])
 def dashboard():
@@ -65,9 +67,8 @@ def dashboard():
         return jsonify({'error': 'Database connection failed'}), 500
 
     cursor = conn.cursor(dictionary=True)
-
     cursor.execute("SELECT COUNT(*) as total FROM lockers")
-    total = cursor.fetchone()['total']
+    total_lockers = cursor.fetchone()['total']
 
     cursor.execute("SELECT COUNT(*) as occupied FROM lockers WHERE status = 1")
     occupied = cursor.fetchone()['occupied']
@@ -79,9 +80,9 @@ def dashboard():
     conn.close()
 
     return jsonify({
-        'total_lockers': total,
+        'total_lockers': total_lockers,
         'occupied': occupied,
-        'available': total - occupied,
+        'available': total_lockers - occupied,
         'total_users': total_users
     })
 
@@ -105,7 +106,6 @@ def get_lockers():
     lockers = cursor.fetchall()
     cursor.close()
     conn.close()
-
     return jsonify(lockers)
 
 @app.route('/api/lockers/<int:locker_id>/force-open', methods=['POST'])
@@ -118,23 +118,23 @@ def force_open(locker_id):
         return jsonify({'error': 'Database error'}), 500
 
     cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO transactions (locker_id, action, detail)
+            VALUES (%s, 'admin_force_open', 'เปิดตู้ด้วยมือโดย admin')
+        """, (locker_id,))
 
-    cursor.execute("""
-        INSERT INTO transactions (locker_id, action, detail)
-        VALUES (%s, 'admin_force_open', 'เปิดตู้ด้วยมือโดย admin')
-    """, (locker_id,))
+        cursor.execute("""
+            UPDATE lockers
+            SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL
+            WHERE locker_id = %s
+        """, (locker_id,))
 
-    cursor.execute("""
-        UPDATE lockers
-        SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL
-        WHERE locker_id = %s
-    """, (locker_id,))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return jsonify({'success': True, 'message': 'เปิดตู้สำเร็จแล้ว'})
+        conn.commit()
+        return jsonify({'success': True, 'message': 'เปิดตู้สำเร็จแล้ว'})
+    finally:
+        cursor.close()
+        conn.close()
 
 # ====================== Users Management ======================
 
@@ -148,15 +148,10 @@ def get_users():
         return jsonify({'error': 'Database error'}), 500
 
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT user_id, room_number, phone, fullname, note, active, created_at
-        FROM users
-        ORDER BY user_id
-    """)
+    cursor.execute("SELECT user_id, room_number, phone, fullname, note, active, created_at FROM users ORDER BY user_id")
     users = cursor.fetchall()
     cursor.close()
     conn.close()
-
     return jsonify(users)
 
 @app.route('/api/users', methods=['POST'])
@@ -165,16 +160,18 @@ def add_user():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.get_json()
-    room_number = data.get('room_number')
-    phone = data.get('phone')
-    passcode = data.get('passcode')
-    fullname = data.get('fullname')
-    note = data.get('note')
+    room_number = data.get('room_number', '').strip()
+    phone = data.get('phone', '').strip()
+    passcode = data.get('passcode', '').strip()
+    fullname = data.get('fullname', '').strip()
+    note = data.get('note', '').strip()
     active = data.get('active', 1)
+
+    if not phone or not passcode:
+        return jsonify({'success': False, 'message': 'กรุณากรอกเบอร์โทรและรหัสผ่าน'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
-
     try:
         cursor.execute("""
             INSERT INTO users (room_number, phone, passcode, fullname, note, active)
@@ -198,51 +195,57 @@ def update_user(user_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    # 1. เช็กก่อนว่ามีผู้ใช้จริงไหม
-    cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-    user = cursor.fetchone()
-
-    if not user:
-        cursor.close()
-        conn.close()
-        return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้'}), 404
-
-    # 2. อัปเดตข้อมูล
     try:
-        cursor.execute("""
-            UPDATE users
-            SET room_number = %s,
-                phone = %s,
-                fullname = %s,
-                note = %s,
-                active = %s
-            WHERE user_id = %s
-        """, (
-            data.get('room_number'),
-            data.get('phone'),
-            data.get('fullname'),
-            data.get('note'),
-            data.get('active'),
-            user_id
-        ))
+        # ตรวจสอบว่ามีผู้ใช้จริงไหม
+        cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้'}), 404
 
+        # สร้าง query อัปเดตแบบ dynamic
+        updates = []
+        params = []
+
+        if 'room_number' in data:
+            updates.append("room_number = %s")
+            params.append(data['room_number'])
+        if 'phone' in data:
+            updates.append("phone = %s")
+            params.append(data['phone'])
+        if 'fullname' in data:
+            updates.append("fullname = %s")
+            params.append(data['fullname'])
+        if 'note' in data:
+            updates.append("note = %s")
+            params.append(data['note'])
+        if 'active' in data:
+            updates.append("active = %s")
+            params.append(data['active'])
+        if 'passcode' in data:  # รองรับการเปลี่ยนรหัสผ่าน
+            updates.append("passcode = %s")
+            params.append(data['passcode'])
+
+        if not updates:
+            return jsonify({'success': False, 'message': 'ไม่มีข้อมูลให้อัปเดต'}), 400
+
+        params.append(user_id)
+        query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = %s"
+
+        cursor.execute(query, params)
         conn.commit()
         return jsonify({'success': True, 'message': 'แก้ไขสำเร็จ'})
-
     except mysql.connector.IntegrityError:
         return jsonify({'success': False, 'message': 'เบอร์โทรนี้มีในระบบแล้ว'}), 400
-
     finally:
         cursor.close()
         conn.close()
 
-# ====================== User Features (ไม่ต้อง login admin) ======================
+# ====================== User Features ======================
 
 @app.route('/api/user/login', methods=['POST'])
 def user_login():
     data = request.get_json()
-    phone = data.get('phone')
-    passcode = data.get('passcode')
+    phone = data.get('phone', '').strip()
+    passcode = data.get('passcode', '').strip()
 
     conn = get_db()
     if not conn:
@@ -275,15 +278,12 @@ def user_dashboard():
 
     cursor = conn.cursor(dictionary=True)
 
-    # ข้อมูลผู้ใช้
     cursor.execute("SELECT user_id, room_number, phone, fullname FROM users WHERE user_id = %s", (user_id,))
     user = cursor.fetchone()
 
-    # ตู้ที่ใช้งานอยู่
     cursor.execute("SELECT locker_id, deposit_time FROM lockers WHERE user_id = %s AND status = 1", (user_id,))
     current_locker = cursor.fetchone()
 
-    # จำนวนตู้ว่าง
     cursor.execute("SELECT COUNT(*) as available FROM lockers WHERE status = 0")
     available = cursor.fetchone()['available']
 
@@ -308,7 +308,6 @@ def user_deposit():
     conn = get_db()
     cursor = conn.cursor()
 
-    # หาตู้ว่างตัวแรก
     cursor.execute("SELECT locker_id FROM lockers WHERE status = 0 LIMIT 1")
     locker = cursor.fetchone()
 
@@ -369,7 +368,52 @@ def user_withdraw():
         cursor.close()
         conn.close()
         return jsonify({'success': False, 'message': 'คุณไม่มีตู้ที่ใช้งานอยู่'}), 400
+    
+ # ====================== ลบผู้ใช้ ======================
+# ====================== ลบผู้ใช้ ======================
 
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    cursor = conn.cursor()
+
+    try:
+        # ลบ transaction ที่เกี่ยวข้องก่อน (เพื่อหลีกเลี่ยง foreign key error)
+        cursor.execute("""
+            DELETE FROM transactions 
+            WHERE locker_id IN (
+                SELECT locker_id FROM lockers WHERE user_id = %s
+            )
+        """, (user_id,))
+
+        # รีเซ็ตตู้ที่ผู้ใช้นี้กำลังใช้งาน
+        cursor.execute("""
+            UPDATE lockers 
+            SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL 
+            WHERE user_id = %s
+        """, (user_id,))
+
+        # ลบผู้ใช้จริง
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้ที่ต้องการลบ'}), 404
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'ลบผู้ใช้สำเร็จ (ข้อมูลเกี่ยวข้องถูกลบแล้ว)'})
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting user {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'เกิดข้อผิดพลาดในการลบผู้ใช้'}), 500
+    finally:
+        cursor.close()
+        conn.close()
 # ====================== Run Server ======================
 
 if __name__ == '__main__':

@@ -10,8 +10,7 @@ export default function Users() {
   const [formData, setFormData] = useState({
     room_number: '', 
     phone: '', 
-    passcode: '',      // สำหรับเพิ่มผู้ใช้ใหม่หรือเปลี่ยนรหัส
-    new_passcode: '',  // เฉพาะตอนแก้ไข (optional)
+    passcode: '',      
     fullname: '', 
     note: '', 
     active: 1
@@ -31,45 +30,26 @@ export default function Users() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    let payload = { ...formData };
-
-    // ถ้าเป็นการแก้ไข และไม่ได้กรอกรหัสใหม่ → ลบ field ออก เพื่อไม่ให้อัปเดต passcode
-    if (editingUser && !formData.new_passcode) {
-      delete payload.passcode;
-      delete payload.new_passcode;
-    } else if (editingUser && formData.new_passcode) {
-      // ใช้ชื่อ field เป็น passcode สำหรับ backend
-      payload.passcode = formData.new_passcode;
-      delete payload.new_passcode;
-    }
-
     const url = editingUser ? `/users/${editingUser.user_id}` : '/users';
     const method = editingUser ? axios.put : axios.post;
 
-    method(url, payload)
+    method(url, formData)
       .then(res => {
         alert(res.data.message || (editingUser ? 'แก้ไขสำเร็จ' : 'เพิ่มสำเร็จ'));
         setShowForm(false);
         setEditingUser(null);
-        setFormData({ 
-          room_number: '', phone: '', passcode: '', new_passcode: '', 
-          fullname: '', note: '', active: 1 
-        });
+        setFormData({ room_number: '', phone: '', passcode: '', fullname: '', note: '', active: 1 });
         fetchUsers();
       })
-      .catch(err => {
-        alert(err.response?.data?.message || 'เกิดข้อผิดพลาด');
-      });
+      .catch(err => alert(err.response?.data?.message || 'เกิดข้อผิดพลาด'));
   };
 
   const startEdit = (user) => {
     setEditingUser(user);
     setFormData({
-      room_number: user.room_number,
-      phone: user.phone,
-      passcode: '',           // ไม่ต้องกรอกตอนเพิ่ม
-      new_passcode: '',       // สำหรับเปลี่ยนรหัสใหม่ (optional)
+      room_number: user.room_number || '',
+      phone: user.phone || '',
+      passcode: '',
       fullname: user.fullname || '',
       note: user.note || '',
       active: user.active
@@ -77,25 +57,46 @@ export default function Users() {
     setShowForm(true);
   };
 
+  // ฟังก์ชันลบผู้ใช้
+  const handleDelete = (user) => {
+    const userName = user.fullname || user.phone || `ID ${user.user_id}`;
+
+    if (!window.confirm(`ยืนยันการลบผู้ใช้ "${userName}" หรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`)) {
+      return;
+    }
+
+    axios.delete(`/users/${user.user_id}`)
+      .then(res => {
+        alert(res.data.message || 'ลบผู้ใช้สำเร็จ');
+        fetchUsers(); // รีเฟรชรายการทันที
+      })
+      .catch(err => {
+        const msg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้';
+        alert(msg);
+      });
+  };
+
   const cancelForm = () => {
     setShowForm(false);
     setEditingUser(null);
-    setFormData({ 
-      room_number: '', phone: '', passcode: '', new_passcode: '', 
-      fullname: '', note: '', active: 1 
-    });
+    setFormData({ room_number: '', phone: '', passcode: '', fullname: '', note: '', active: 1 });
   };
 
   return (
     <>
       <Navbar />
       <div className="container">
+        <h2 style={{margin: '2rem 0 1rem 0', color: '#2c3e50', fontSize: '2rem'}}>จัดการผู้ใช้</h2>
         
-        <h2>จัดการผู้ใช้</h2>
         <button 
           className="btn btn-primary" 
           onClick={() => setShowForm(true)} 
-          style={{marginBottom: '1.5rem', fontSize: '1.1rem', padding: '0.8rem 1.5rem',marginTop:'1rem'}}
+          style={{
+            marginBottom: '2rem', 
+            fontSize: '1.2rem', 
+            padding: '0.9rem 2rem', 
+            fontWeight: '600'
+          }}
         >
           + เพิ่มผู้ใช้ใหม่
         </button>
@@ -108,92 +109,74 @@ export default function Users() {
             boxShadow: '0 10px 30px rgba(0,0,0,0.1)', 
             marginBottom: '3rem'
           }}>
-            <h4 style={{marginBottom: '1.5rem', color: '#2c3e50'}}>
+            <h4 style={{marginBottom: '1.5rem', color: '#2c3e50', fontSize: '1.6rem'}}>
               {editingUser ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้ใหม่'}
             </h4>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>ห้อง</label>
+                <label style={{fontWeight: '600'}}>ห้อง</label>
                 <input 
                   type="text" 
                   value={formData.room_number} 
-                  onChange={e => setFormData({...formData, room_number: e.target.value})} 
+                  onChange={e => setFormData({...formData, room_number: e.target.value.trim()})} 
                   required 
+                  placeholder="เช่น 101"
                 />
               </div>
               <div className="form-group">
-                <label>เบอร์โทร</label>
+                <label style={{fontWeight: '600'}}>เบอร์โทร</label>
                 <input 
                   type="text" 
                   value={formData.phone} 
-                  onChange={e => setFormData({...formData, phone: e.target.value})} 
+                  onChange={e => setFormData({...formData, phone: e.target.value.trim()})} 
                   required 
+                  placeholder="เช่น 0863841265"
                 />
               </div>
-
-              {/* รหัสผ่าน - บังคับกรอกตอนเพิ่มผู้ใช้ใหม่ */}
               {!editingUser && (
                 <div className="form-group">
-                  <label>รหัสผ่าน (Passcode)</label>
+                  <label style={{fontWeight: '600'}}>รหัสผ่าน (Passcode)</label>
                   <input 
-                    type="text" 
+                    type="password" 
                     value={formData.passcode} 
-                    onChange={e => setFormData({...formData, passcode: e.target.value})} 
+                    onChange={e => setFormData({...formData, passcode: e.target.value.trim()})} 
                     required 
                     placeholder="เช่น 1234"
                   />
                 </div>
               )}
-
-              {/* เปลี่ยนรหัสผ่านใหม่ - เฉพาะตอนแก้ไข (ไม่บังคับ) */}
-              {editingUser && (
-                <div className="form-group">
-                  <label>เปลี่ยนรหัสผ่านใหม่ (ถ้าต้องการ)</label>
-                  <input 
-                    type="text" 
-                    value={formData.new_passcode} 
-                    onChange={e => setFormData({...formData, new_passcode: e.target.value})} 
-                    placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน"
-                  />
-                  <small style={{color: '#7f8c8d', fontStyle: 'italic'}}>
-                    ถ้าไม่กรอก จะคงรหัสผ่านเดิมไว้
-                  </small>
-                </div>
-              )}
-
               <div className="form-group">
-                <label>ชื่อ-นามสกุล</label>
+                <label style={{fontWeight: '600'}}>ชื่อ-นามสกุล</label>
                 <input 
                   type="text" 
                   value={formData.fullname} 
-                  onChange={e => setFormData({...formData, fullname: e.target.value})} 
+                  onChange={e => setFormData({...formData, fullname: e.target.value.trim()})} 
+                  placeholder="เช่น นายทดสอบ หนึ่ง"
                 />
               </div>
-              
               <div className="form-group">
-                <label>โน๊ต</label>
+                <label style={{fontWeight: '600'}}>โน๊ต</label>
                 <textarea 
                   value={formData.note} 
-                  onChange={e => setFormData({...formData, note: e.target.value})} 
+                  onChange={e => setFormData({...formData, note: e.target.value.trim()})} 
                   rows="3" 
                   placeholder="ข้อมูลเพิ่มเติม..."
                 />
               </div>
-
               <div className="form-group">
-                <label style={{display: 'flex', alignItems: 'center', fontWeight: '500'}}>
+                <label style={{display: 'flex', alignItems: 'center', fontWeight: '600'}}>
                   <input 
                     type="checkbox" 
                     checked={formData.active} 
                     onChange={e => setFormData({...formData, active: e.target.checked ? 1 : 0})}
-                    style={{marginRight: '0.8rem'}}
+                    style={{marginRight: '0.8rem', width: '20px', height: '20px'}}
                   />
                   เปิดใช้งานผู้ใช้นี้
                 </label>
               </div>
 
-              <div style={{marginTop: '2rem'}}>
-                <button type="submit" className="btn btn-primary" style={{padding: '0.9rem 2rem', fontSize: '1.1rem'}}>
+              <div style={{marginTop: '2.5rem'}}>
+                <button type="submit" className="btn btn-primary" style={{padding: '1rem 2.5rem', fontSize: '1.2rem'}}>
                   {editingUser ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้'}
                 </button>
                 <button 
@@ -201,12 +184,12 @@ export default function Users() {
                   onClick={cancelForm} 
                   style={{
                     marginLeft: '1rem', 
-                    padding: '0.9rem 2rem', 
+                    padding: '1rem 2.5rem', 
                     backgroundColor: '#95a5a6', 
                     color: 'white', 
                     border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '1.1rem',
+                    borderRadius: '12px',
+                    fontSize: '1.2rem',
                     cursor: 'pointer'
                   }}
                 >
@@ -217,7 +200,7 @@ export default function Users() {
           </div>
         )}
 
-        {/* ตารางผู้ใช้ */}
+        {/* ตารางผู้ใช้ - มีปุ่มลบแล้ว */}
         <table className="table">
           <thead>
             <tr>
@@ -234,8 +217,8 @@ export default function Users() {
           <tbody>
             {users.map(user => (
               <tr key={user.user_id}>
-                <td>{user.user_id}</td>
-                <td>{user.room_number}</td>
+                <td><strong>{user.user_id}</strong></td>
+                <td>{user.room_number || '-'}</td>
                 <td>{user.phone}</td>
                 <td>{user.fullname || '-'}</td>
                 <td>{user.note || '-'}</td>
@@ -250,9 +233,16 @@ export default function Users() {
                   <button 
                     className="btn btn-warning" 
                     onClick={() => startEdit(user)}
-                    style={{padding: '0.6rem 1.2rem'}}
+                    style={{padding: '0.7rem 1.5rem', marginRight: '0.8rem', fontSize: '1rem'}}
                   >
                     แก้ไข
+                  </button>
+                  <button 
+                    className="btn btn-danger"
+                    onClick={() => handleDelete(user)}
+                    style={{padding: '0.7rem 1.5rem', fontSize: '1rem'}}
+                  >
+                    ลบ
                   </button>
                 </td>
               </tr>

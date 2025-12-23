@@ -15,7 +15,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-brand">
         <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>
-          Safe Locker Admin
+          Safe Locker Admin หอพัก
         </Link>
       </div>
       <div className="navbar-links">
