@@ -302,7 +302,7 @@ body {
 /* กล่องสถานะตู้ที่ใช้งานอยู่ */
 .current-locker-box {
   background: linear-gradient(135deg, #e8f5e8 0%, #d0f0d0 100%);
-  padding: 2.5rem;
+  padding: 10px;
   border-radius: 20px;
   border: 3px solid #27ae60;
   margin: 2.5rem 0;
@@ -318,7 +318,7 @@ body {
 .current-locker-box h1 {
   font-size: 6rem;
   color: #27ae60;
-  margin: 1.5rem 0;
+  margin: 0.5rem 0;
   font-weight: 900;
   text-shadow: 0 4px 10px rgba(39, 174, 96, 0.2);
 }
