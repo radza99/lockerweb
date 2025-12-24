@@ -40,7 +40,7 @@ return (
           <label>รหัสผ่าน</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
         </div>
-        <button type="submit" className="btn btn-primary" style={{width:'50%'}} disabled={loading}>
+        <button type="submit" className="btn btn-loginadmin" style={{width:'50%'}} disabled={loading}>
           {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </button>
         <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>

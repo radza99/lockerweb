@@ -95,7 +95,7 @@ export default function UserLogin() {
 
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-loginuser"
             disabled={loading}
             style={{
               width: '40%', 
