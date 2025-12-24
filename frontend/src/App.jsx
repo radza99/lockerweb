@@ -4,11 +4,9 @@ import { AuthProvider, useAuth } from './components/AuthContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Lockers from './components/Lockers';
-import Users from './components/Users';  // เพิ่มบรรทัดนี้
+import Users from './components/Users'; 
 import UserDashboard from './components/UserDashboard'; 
 import UserLogin from './components/UserLogin';
-// ลบบรรทัดนี้ทิ้งเพราะเราไม่ใช้ Bootstrap อีกต่อไป
-// import 'bootstrap/dist/css/bootstrap.min.css';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
