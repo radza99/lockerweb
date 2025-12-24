@@ -52,13 +52,14 @@ return (
     style={{
       display: 'inline-block',
       padding: '1rem 2.5rem',
+      marginTop: '-0.2rem',  
       background: 'linear-gradient(135deg, #16a085 0%, #1abc9c 100%)',
       color: 'white',
       textDecoration: 'none',
       borderRadius: '16px',
-      fontSize: '1rem',
-      fontWeight: '600',
-      boxShadow: '0 8px 25px rgba(22, 160, 133, 0.3)'
+      fontSize: '1.2rem',
+      fontWeight: '60',
+      boxShadow: '0 8px 25px rgba(27, 88, 76, 0.3)'
     }}
   >
     เข้าสู่ระบบสำหรับผู้ใช้

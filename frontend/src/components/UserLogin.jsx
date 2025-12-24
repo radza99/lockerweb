@@ -98,7 +98,7 @@ export default function UserLogin() {
             className="btn btn-loginuser"
             disabled={loading}
             style={{
-              width: '40%', 
+              width: '50%', 
               padding: '1.2rem', 
               fontSize: '1.3rem', 
               fontWeight: '600',
