@@ -10,7 +10,8 @@ export default function Users() {
   const [formData, setFormData] = useState({
     room_number: '', 
     phone: '', 
-    passcode: '',      
+    passcode: '',          // สำหรับเพิ่มผู้ใช้ใหม่ (บังคับ)
+    new_passcode: '',      // สำหรับแก้ไข (optional)
     fullname: '', 
     note: '', 
     active: 1
@@ -30,18 +31,43 @@ export default function Users() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    let payload = {
+      room_number: formData.room_number.trim(),
+      phone: formData.phone.trim(),
+      fullname: formData.fullname.trim(),
+      note: formData.note.trim(),
+      active: formData.active
+    };
+
+    // ถ้าเพิ่มผู้ใช้ใหม่ → ต้องมี passcode
+    if (!editingUser) {
+      if (!formData.passcode.trim()) {
+        alert('กรุณากรอกรหัสผ่านสำหรับผู้ใช้ใหม่');
+        return;
+      }
+      payload.passcode = formData.passcode.trim();
+    }
+
+    // ถ้าแก้ไขและกรอกรหัสผ่านใหม่ → ส่ง passcode
+    if (editingUser && formData.new_passcode.trim()) {
+      payload.passcode = formData.new_passcode.trim();
+    }
+
     const url = editingUser ? `/users/${editingUser.user_id}` : '/users';
     const method = editingUser ? axios.put : axios.post;
 
-    method(url, formData)
+    method(url, payload)
       .then(res => {
-        alert(res.data.message || (editingUser ? 'แก้ไขสำเร็จ' : 'เพิ่มสำเร็จ'));
+        alert(res.data.message || (editingUser ? 'แก้ไขผู้ใช้สำเร็จ' : 'เพิ่มผู้ใช้สำเร็จ'));
         setShowForm(false);
         setEditingUser(null);
-        setFormData({ room_number: '', phone: '', passcode: '', fullname: '', note: '', active: 1 });
+        setFormData({ room_number: '', phone: '', passcode: '', new_passcode: '', fullname: '', note: '', active: 1 });
         fetchUsers();
       })
-      .catch(err => alert(err.response?.data?.message || 'เกิดข้อผิดพลาด'));
+      .catch(err => {
+        alert(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+      });
   };
 
   const startEdit = (user) => {
@@ -50,6 +76,7 @@ export default function Users() {
       room_number: user.room_number || '',
       phone: user.phone || '',
       passcode: '',
+      new_passcode: '',
       fullname: user.fullname || '',
       note: user.note || '',
       active: user.active
@@ -57,10 +84,9 @@ export default function Users() {
     setShowForm(true);
   };
 
-  // ฟังก์ชันลบผู้ใช้
   const handleDelete = (user) => {
     const userName = user.fullname || user.phone || `ID ${user.user_id}`;
-
+    
     if (!window.confirm(`ยืนยันการลบผู้ใช้ "${userName}" หรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`)) {
       return;
     }
@@ -68,18 +94,17 @@ export default function Users() {
     axios.delete(`/users/${user.user_id}`)
       .then(res => {
         alert(res.data.message || 'ลบผู้ใช้สำเร็จ');
-        fetchUsers(); // รีเฟรชรายการทันที
+        fetchUsers();
       })
       .catch(err => {
-        const msg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้';
-        alert(msg);
+        alert(err.response?.data?.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้');
       });
   };
 
   const cancelForm = () => {
     setShowForm(false);
     setEditingUser(null);
-    setFormData({ room_number: '', phone: '', passcode: '', fullname: '', note: '', active: 1 });
+    setFormData({ room_number: '', phone: '', passcode: '', new_passcode: '', fullname: '', note: '', active: 1 });
   };
 
   return (
@@ -133,6 +158,8 @@ export default function Users() {
                   placeholder="เช่น 0863841265"
                 />
               </div>
+
+              {/* รหัสผ่านสำหรับผู้ใช้ใหม่ (บังคับ) */}
               {!editingUser && (
                 <div className="form-group">
                   <label style={{fontWeight: '600'}}>รหัสผ่าน (Passcode)</label>
@@ -145,6 +172,23 @@ export default function Users() {
                   />
                 </div>
               )}
+
+              {/* เปลี่ยนรหัสผ่านสำหรับแก้ไข (ไม่บังคับ) */}
+              {editingUser && (
+                <div className="form-group">
+                  <label style={{fontWeight: '600'}}>เปลี่ยนรหัสผ่านใหม่ (ถ้าต้องการ)</label>
+                  <input 
+                    type="password" 
+                    value={formData.new_passcode} 
+                    onChange={e => setFormData({...formData, new_passcode: e.target.value.trim()})} 
+                    placeholder="เว้นว่างหากไม่ต้องการเปลี่ยน"
+                  />
+                  <small style={{color: '#7f8c8d', fontStyle: 'italic', display: 'block', marginTop: '0.5rem'}}>
+                    ถ้าไม่กรอก จะคงรหัสผ่านเดิมไว้
+                  </small>
+                </div>
+              )}
+
               <div className="form-group">
                 <label style={{fontWeight: '600'}}>ชื่อ-นามสกุล</label>
                 <input 
@@ -154,6 +198,7 @@ export default function Users() {
                   placeholder="เช่น นายทดสอบ หนึ่ง"
                 />
               </div>
+
               <div className="form-group">
                 <label style={{fontWeight: '600'}}>โน๊ต</label>
                 <textarea 
@@ -163,6 +208,7 @@ export default function Users() {
                   placeholder="ข้อมูลเพิ่มเติม..."
                 />
               </div>
+
               <div className="form-group">
                 <label style={{display: 'flex', alignItems: 'center', fontWeight: '600'}}>
                   <input 
@@ -175,7 +221,7 @@ export default function Users() {
                 </label>
               </div>
 
-              <div style={{marginTop: '2.5rem'}}>
+              <div style={{marginTop: '2.5rem', textAlign: 'center'}}>
                 <button type="submit" className="btn btn-primary" style={{padding: '1rem 2.5rem', fontSize: '1.2rem'}}>
                   {editingUser ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้'}
                 </button>
@@ -200,7 +246,7 @@ export default function Users() {
           </div>
         )}
 
-        {/* ตารางผู้ใช้ - มีปุ่มลบแล้ว */}
+        {/* ตารางผู้ใช้ */}
         <table className="table">
           <thead>
             <tr>

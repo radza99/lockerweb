@@ -3,13 +3,16 @@ from flask_cors import CORS
 import mysql.connector
 from datetime import timedelta
 from mysql.connector import Error
+import os
+from dotenv import load_dotenv  
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'super-secret-key-เปลี่ยนเป็นอะไรก็ได้ที่ปลอดภัย'
+app.secret_key = '7ec7f9f20538a94ab9708c406b4eb7bea79dede997f6a23ed7439ab8e10b3411'
 
-# ตั้งค่า Session ให้หมดอายุเมื่อปิดเบราว์เซอร์
+# ตั้งค่า Session
 app.config['SESSION_PERMANENT'] = False
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # สูงสุด 30 นาที
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # เปลี่ยนเป็น True เมื่อใช้ HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -19,10 +22,10 @@ CORS(app, supports_credentials=True)
 def get_db():
     try:
         conn = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='1234',
-            database='db_safe_locker'
+         host=os.getenv('DB_HOST'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        database=os.getenv('DB_NAME')
         )
         return conn
     except Error as e:
@@ -39,7 +42,7 @@ def admin_login():
 
     if username == 'admin' and password == 'admin123':
         session['admin_logged_in'] = True
-        session.permanent = False  # หมดอายุเมื่อปิดเบราว์เซอร์
+        session.permanent = False
         return jsonify({'success': True, 'message': 'เข้าสู่ระบบสำเร็จ'})
     else:
         return jsonify({'success': False, 'message': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}), 401
@@ -54,6 +57,27 @@ def check_login():
 def admin_logout():
     session.pop('admin_logged_in', None)
     return jsonify({'success': True})
+@app.route('/api/admin/transactions', methods=['GET'])
+def get_transactions():
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT t.*, u.fullname, u.phone
+        FROM transactions t
+        LEFT JOIN users u ON t.user_id = u.user_id
+        ORDER BY t.timestamp DESC
+        LIMIT 50
+    """)
+    logs = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(logs)
 
 # ====================== Admin Dashboard & Lockers ======================
 
@@ -196,12 +220,10 @@ def update_user(user_id):
     cursor = conn.cursor()
 
     try:
-        # ตรวจสอบว่ามีผู้ใช้จริงไหม
         cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
         if not cursor.fetchone():
             return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้'}), 404
 
-        # สร้าง query อัปเดตแบบ dynamic
         updates = []
         params = []
 
@@ -220,7 +242,7 @@ def update_user(user_id):
         if 'active' in data:
             updates.append("active = %s")
             params.append(data['active'])
-        if 'passcode' in data:  # รองรับการเปลี่ยนรหัสผ่าน
+        if 'passcode' in data:
             updates.append("passcode = %s")
             params.append(data['passcode'])
 
@@ -235,6 +257,51 @@ def update_user(user_id):
         return jsonify({'success': True, 'message': 'แก้ไขสำเร็จ'})
     except mysql.connector.IntegrityError:
         return jsonify({'success': False, 'message': 'เบอร์โทรนี้มีในระบบแล้ว'}), 400
+    finally:
+        cursor.close()
+        conn.close()
+
+# ====================== ลบผู้ใช้ ======================
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    cursor = conn.cursor()
+
+    try:
+        # ลบ transaction ที่เกี่ยวข้องก่อน
+        cursor.execute("""
+            DELETE FROM transactions 
+            WHERE locker_id IN (
+                SELECT locker_id FROM lockers WHERE user_id = %s
+            )
+        """, (user_id,))
+
+        # รีเซ็ตตู้
+        cursor.execute("""
+            UPDATE lockers 
+            SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL 
+            WHERE user_id = %s
+        """, (user_id,))
+
+        # ลบผู้ใช้
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้ที่ต้องการลบ'}), 404
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': 'ลบผู้ใช้สำเร็จ (ข้อมูลเกี่ยวข้องถูกลบแล้ว)'})
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting user {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'เกิดข้อผิดพลาดในการลบผู้ใช้'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -273,16 +340,18 @@ def user_dashboard():
         return jsonify({'error': 'Unauthorized'}), 401
 
     conn = get_db()
-    if not conn:
-        return jsonify({'error': 'Database error'}), 500
-
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT user_id, room_number, phone, fullname FROM users WHERE user_id = %s", (user_id,))
+    cursor.execute("SELECT user_id, room_number, phone, fullname, active FROM users WHERE user_id = %s", (user_id,))
     user = cursor.fetchone()
 
-    cursor.execute("SELECT locker_id, deposit_time FROM lockers WHERE user_id = %s AND status = 1", (user_id,))
-    current_locker = cursor.fetchone()
+    cursor.execute("""
+        SELECT locker_id, deposit_time 
+        FROM lockers 
+        WHERE user_id = %s AND status = 1
+        ORDER BY deposit_time DESC
+    """, (user_id,))
+    current_lockers = cursor.fetchall()
 
     cursor.execute("SELECT COUNT(*) as available FROM lockers WHERE status = 0")
     available = cursor.fetchone()['available']
@@ -293,7 +362,7 @@ def user_dashboard():
     if user:
         return jsonify({
             'user': user,
-            'current_locker': current_locker,
+            'current_lockers': current_lockers,
             'available_lockers': available
         })
     return jsonify({'error': 'User not found'}), 404
@@ -328,7 +397,11 @@ def user_deposit():
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({'success': True, 'locker_id': locker_id, 'message': f'ฝากของสำเร็จ ตู้หมายเลข {locker_id}'})
+        return jsonify({
+            'success': True, 
+            'locker_id': locker_id, 
+            'message': f'ฝากของสำเร็จ ตู้หมายเลข {locker_id}'
+        })
     else:
         cursor.close()
         conn.close()
@@ -338,17 +411,17 @@ def user_deposit():
 def user_withdraw():
     data = request.get_json()
     user_id = data.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้'}), 400
+    locker_id = data.get('locker_id')
+    if not user_id or not locker_id:
+        return jsonify({'success': False, 'message': 'ข้อมูลไม่ครบถ้วน'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT locker_id FROM lockers WHERE user_id = %s AND status = 1", (user_id,))
+    cursor.execute("SELECT locker_id FROM lockers WHERE locker_id = %s AND user_id = %s AND status = 1", (locker_id, user_id))
     locker = cursor.fetchone()
 
     if locker:
-        locker_id = locker[0]
         cursor.execute("""
             UPDATE lockers 
             SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL
@@ -363,19 +436,21 @@ def user_withdraw():
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({'success': True, 'message': 'ถอนของสำเร็จ'})
+        return jsonify({'success': True, 'message': f'ถอนของจากตู้ {locker_id} สำเร็จ'})
     else:
         cursor.close()
         conn.close()
-        return jsonify({'success': False, 'message': 'คุณไม่มีตู้ที่ใช้งานอยู่'}), 400
-    
- # ====================== ลบผู้ใช้ ======================
-# ====================== ลบผู้ใช้ ======================
+        return jsonify({'success': False, 'message': 'ไม่พบตู้ที่คุณใช้งานอยู่'}), 400
 
-@app.route('/api/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Unauthorized'}), 401
+# ====================== ผู้ใช้แก้ไขข้อมูลตัวเอง ======================
+
+@app.route('/api/user/profile', methods=['PUT'])
+def user_update_profile():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({'success': False, 'message': 'ไม่พบข้อมูลผู้ใช้'}), 400
 
     conn = get_db()
     if not conn:
@@ -384,37 +459,41 @@ def delete_user(user_id):
     cursor = conn.cursor()
 
     try:
-        # ลบ transaction ที่เกี่ยวข้องก่อน (เพื่อหลีกเลี่ยง foreign key error)
-        cursor.execute("""
-            DELETE FROM transactions 
-            WHERE locker_id IN (
-                SELECT locker_id FROM lockers WHERE user_id = %s
-            )
-        """, (user_id,))
+        updates = []
+        params = []
 
-        # รีเซ็ตตู้ที่ผู้ใช้นี้กำลังใช้งาน
-        cursor.execute("""
-            UPDATE lockers 
-            SET status = 0, phone_owner = NULL, user_id = NULL, deposit_time = NULL 
-            WHERE user_id = %s
-        """, (user_id,))
+        if 'fullname' in data:
+            updates.append("fullname = %s")
+            params.append(data['fullname'].strip() if data['fullname'] else None)
+        if 'note' in data:
+            updates.append("note = %s")
+            params.append(data['note'].strip() if data['note'] else None)
+        if 'active' in data is not None:
+            updates.append("active = %s")
+            params.append(int(data['active']))
+        if 'passcode' in data and data['passcode'].strip():
+            updates.append("passcode = %s")
+            params.append(data['passcode'].strip())
 
-        # ลบผู้ใช้จริง
-        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
-        
-        if cursor.rowcount == 0:
-            return jsonify({'success': False, 'message': 'ไม่พบผู้ใช้ที่ต้องการลบ'}), 404
-        
+        if not updates:
+            return jsonify({'success': True, 'message': 'ข้อมูลไม่มีการเปลี่ยนแปลง'})
+
+        params.append(user_id)
+        query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = %s"
+        cursor.execute(query, params)
+
         conn.commit()
-        return jsonify({'success': True, 'message': 'ลบผู้ใช้สำเร็จ (ข้อมูลเกี่ยวข้องถูกลบแล้ว)'})
+        return jsonify({'success': True, 'message': 'อัปเดตข้อมูลสำเร็จ'})
     except Exception as e:
         conn.rollback()
-        print(f"Error deleting user {user_id}: {e}")
-        return jsonify({'success': False, 'message': 'เกิดข้อผิดพลาดในการลบผู้ใช้'}), 500
+        print(f"Error updating user profile {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล'}), 500
     finally:
         cursor.close()
         conn.close()
+
 # ====================== Run Server ======================
 
 if __name__ == '__main__':
+    print("🚀 เริ่มรันเซิร์ฟเวอร์ Flask ที่ http://localhost:")
     app.run(debug=True, port=5000)
